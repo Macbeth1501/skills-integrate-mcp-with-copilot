@@ -4,14 +4,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signup-form");
   const messageDiv = document.getElementById("message");
 
-  // Function to fetch activities from API
-  async function fetchActivities() {
+  // Function to fetch activities from API with filters
+  async function fetchActivities({ category = "", sort = "name", search = "" } = {}) {
     try {
-      const response = await fetch("/activities");
+      // Build query string
+      const params = [];
+      if (category) params.push(`category=${encodeURIComponent(category)}`);
+      if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
+      if (search) params.push(`search=${encodeURIComponent(search)}`);
+      const query = params.length ? `?${params.join("&")}` : "";
+      const response = await fetch(`/activities${query}`);
       const activities = await response.json();
 
-      // Clear loading message
+      // Clear loading message and dropdown
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -40,7 +47,9 @@ document.addEventListener("DOMContentLoaded", () => {
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
+          <p><strong>Category:</strong> ${details.category || ""}</p>
           <p><strong>Schedule:</strong> ${details.schedule}</p>
+          <p><strong>Date:</strong> ${details.date || ""}</p>
           <p><strong>Availability:</strong> ${spotsLeft} spots left</p>
           <div class="participants-container">
             ${participantsHTML}
@@ -154,6 +163,29 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Toolbar filter/sort/search logic
+  const categoryFilter = document.getElementById("category-filter");
+  const sortSelect = document.getElementById("sort-select");
+  const searchInput = document.getElementById("search-input");
+  const filterBtn = document.getElementById("filter-btn");
+
+  function applyFilters() {
+    fetchActivities({
+      category: categoryFilter.value,
+      sort: sortSelect.value,
+      search: searchInput.value
+    });
+  }
+
+  filterBtn.addEventListener("click", applyFilters);
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      applyFilters();
+    }
+  });
+  categoryFilter.addEventListener("change", applyFilters);
+  sortSelect.addEventListener("change", applyFilters);
 
   // Initialize app
   fetchActivities();
